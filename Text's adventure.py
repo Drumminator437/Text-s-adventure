@@ -30,8 +30,43 @@ level1 = [
     ".....XXX................",
     "XXXXXXXXXXXXXXXXXX..XXXX"
     ]
-
-levels = [level0, level1]
+level2 = [
+    "..................................",
+    ".....XXXXX...XXXXX...XXXX.........",
+    "XX........................XX......",
+    "..XX......................XX......",
+    "......XX.......XX.........XX......",
+    "..........XX.......XX.....XX......",
+    ".......................XXXXX......",
+    "..................XXX.....XX......",
+    "............XXX...........XX......",
+    "XXXX...XXX................XXXXXXXX"
+    ]
+level3 = [
+    "........................",
+    "........................",
+    "...............XX.......",
+    "..........XXX...........",
+    ".....XXX................",
+    "XXXXXXXXXXXXXXXXXX..XXXX"
+    ]
+level4 = [
+    "........................",
+    "........................",
+    "...............XX.......",
+    "..........XXX...........",
+    ".....XXX................",
+    "XXXXXXXXXXXXXXXXXX..XXXX"
+    ]
+level5 = [
+    "........................",
+    "........................",
+    "...............XX.......",
+    "..........XXX...........",
+    ".....XXX................",
+    "XXXXXXXXXXXXXXXXXX..XXXX"
+    ]
+levels = [level0, level1, level2,level3,level4,level5]
 currentlevel = 0
 
 
@@ -62,18 +97,56 @@ playery = textRectmain.y
 
 vel_y = 0
 gravity = 0.5
-jump_power = -10
+jumppower = -10
 
-on_ground = False
+onground = False
 
 startgravity = False
 
 camerax = 0
+cameray = 0
 scrollmargin = 250
-def player_collision():
-    global playery, vel_y, on_ground
+def cameracode():
+    global camerax, cameray
+    screenplayerx = playerx - camerax
 
-    on_ground = False
+    if screenplayerx > screenW - scrollmargin:
+        camerax = playerx - (screenW - scrollmargin)
+
+    if screenplayerx < scrollmargin:
+        camerax = playerx - scrollmargin
+
+    if camerax < 0:
+        camerax = 0
+    screen_player_y = playery - cameray
+
+    verticalmargin = 150
+
+    if screen_player_y > screenH - verticalmargin:
+        cameray = playery - (screenH - verticalmargin)
+
+    if screen_player_y < verticalmargin:
+        cameray = playery - verticalmargin
+
+    if cameray < 0:
+        cameray = 0
+
+    max_camera = level_width() - screenW
+    if camerax > max_camera:
+        camerax = max_camera
+def level_width():
+    return len(levels[currentlevel][0]) * tilesize
+def death_code():
+    global running
+
+    levelheight = len(levels[currentlevel]) * tilesize
+
+    if playery > levelheight:
+        running = False
+def player_collision():
+    global playery, vel_y, onground, playerx
+
+    onground = False
 
     playerrect = pygame.Rect(
         playerx,
@@ -95,17 +168,33 @@ def player_collision():
 
                 if playerrect.colliderect(tilerect):
 
-                    if vel_y > 0:
+                    if vel_y >= 0:
                         playery = tilerect.top - textRectmain.height
                         vel_y = 0
                         onground = True
 def draw_level():
-    for row_index, row in enumerate(levels[currentlevel]):
-        for col_index, tile in enumerate(row):
-            if tile == "X":
-                x = col_index * tilesize - camerax
-                y = row_index * tilesize
+    startcollum = int(camerax // tilesize)
+    endcollum = startcollum + (screenW // tilesize) + 2
+
+    for rowindex, row in enumerate(levels[currentlevel]):
+        for collumindex in range(startcollum, min(endcollum, len(row))):
+            if row[collumindex] == "X":
+                x = collumindex * tilesize - camerax
+                y = rowindex * tilesize - cameray
                 screen.blit(groundimage, (x, y))
+def next_level():
+    global currentlevel, playerx, playery, camerax, vel_y
+
+    if playerx > level_width() - 60:
+        currentlevel += 1
+
+        if currentlevel >= len(levels):
+            currentlevel = 0
+
+        playerx = 100
+        playery = 100
+        vel_y = 0
+        camerax = 0
 def Gravity():
     global playery, vel_y
 
@@ -132,8 +221,8 @@ while running:
         playerx -= 5
     if keys[pygame.K_RIGHT]:
         playerx += 5
-    if keys[pygame.K_UP] and on_ground:
-        vel_y = jump_power
+    if keys[pygame.K_UP] and onground:
+        vel_y = jumppower
         onground = False
     keys = pygame.key.get_pressed()
 
@@ -141,19 +230,10 @@ while running:
         playerx = 0
     
 
-    player_collision()
     Gravity()
-
-    screen_player_x = playerx - camerax
-
-    if screen_player_x > screenW - scrollmargin:
-        camerax = playerx - (screenW - scrollmargin)
-
-    if screen_player_x < scrollmargin:
-        camerax = playerx - scrollmargin
-
-    if camerax < 0:
-        camerax = 0
+    player_collision()
+    next_level()
+    cameracode()
 
     starttile = int(camerax // tilesize)
     endtile = int((camerax + screenW) // tilesize) + 2
@@ -161,13 +241,16 @@ while running:
     
     draw_level()
 
-    textRectmain.x = playerx 
-    textRectmain.y = playery
+    textRectmain.x = playerx - camerax
+    textRectmain.y = playery - cameray
 
-    screen.blit(textbox, textRect)
+    if currentlevel == 0:
+        screen.blit(textbox, textRect)
     screen.blit(textboxmain, textRectmain)
 
     pygame.display.flip()
     clock.tick(FPS)
+
+    death_code()
 
 pygame.quit()
