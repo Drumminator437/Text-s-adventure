@@ -222,7 +222,7 @@ def death_code():
     global running, counter
 
     levelheight = len(levels[currentlevel]) * tilesize
-
+    
     if playery > levelheight:
         counter += 1
         if counter == 3:
@@ -517,5 +517,7 @@ while running:
         pygame.display.flip()
         pygame.time.wait(5000)
         running = False
+        
+    death_code()
 
 pygame.quit()
