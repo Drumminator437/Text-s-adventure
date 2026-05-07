@@ -108,7 +108,7 @@ level5 = [
 ]
 
 levels = [level0, level1, level2, level3, level4, level5]
-currentlevel = 5
+currentlevel = 0
 
 screen = pygame.display.set_mode((screenW, screenH), pygame.RESIZABLE)
 clock = pygame.time.Clock()
