@@ -14,22 +14,24 @@ FPS = 60
 
 pygame.init()
 
+pygame.display.set_caption("Text's Adventure")
+
 level0 = [
     "........................",
     "........................",
     "........................",
     "........................",
     "........................",
-    "XXXXXXXXXXXXXXXXXX..XXXX"
+    "XXXXXXXXXXXXXXXXXXXXXXXX"
 ]
 
 level1 = [
-    "........................",
-    "........................",
-    "...............XX.......",
-    "..........XXX...........",
-    ".....XXX................",
-    "XXXXXXXXXXXXXXXXXX..XXXX"
+    "....................................",
+    "....................................",
+    "..........................XX........",
+    ".....................XX.............",
+    "...............XXX..................",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXX..XXXXX"
 ]
 
 level2 = [
@@ -122,7 +124,12 @@ groundimage = pygame.transform.scale(groundimage, (tilesize, tilesize))
 
 bossrect = pygame.Rect((500,10,100,100))
 bosshp = 100
+bossimage = pygame.image.load("Boss.png")
+bossimage = pygame.transform.scale(bossimage, (bossrect.width, bossrect.height))
 
+lives = 3
+
+mainmenuetext = "Press any key to start"
 messegemain = "Text"
 messege = "The adventure of "
 deathtext = "YOU GOT ERASED"
@@ -138,10 +145,18 @@ deathtextrect2 = deathtextbox2.get_rect()
 deathtextrect.center = (screenW // 2, screenH // 2 - 20)
 deathtextrect2.center = (screenW // 2, screenH // 2 + 20)
 
-textbox = font.render(messege, True, blue)
+livestext = font.render(f"Lives: {lives}", True, black)
+livestextRect = livestext.get_rect()
+
+textbox= font.render(messege, True, black)
 textRect = textbox.get_rect()
 
-textboxmain = font.render(messegemain, True, blue)
+livestextRect.center = (100,20)
+
+mainmenutext = font.render(messege, True, black)
+mainmenutextRect = mainmenutext.get_rect()
+
+textboxmain = font.render(messegemain, True, black)
 textRectmain = textboxmain.get_rect()
 
 textRect.center = (500,200)
@@ -176,6 +191,9 @@ startgravity = False
 camerax = 0
 cameray = 0
 scrollmargin = 250
+
+pygame.mixer.init()
+currentsong = ""
 
 
 def cameracode():
@@ -219,17 +237,21 @@ def level_width():
 
 
 def death_code():
-    global running, counter
+    global running, counter, lives, gamestate
 
     levelheight = len(levels[currentlevel]) * tilesize
     
+    if currentlevel == 4:
+        lives == 6
+    if currentlevel >= 5:
+        lives = playerhp
     if playery > levelheight:
-        counter += 1
-        if counter == 3:
-            running = False
+        lives -= 1
+        if lives <= 0:
+            gamestate = "death"
         else:
             save_code()
-
+    return lives, gamestate
 
 def collision_y():
     global playery, vel_y, onground
@@ -342,15 +364,9 @@ def next_level():
 
 def bossspawn():
     if currentlevel == 5:
-        pygame.draw.rect(
-            screen,
-            blue,
-            (
-                bossrect.x - camerax,
-                bossrect.y - cameray,
-                bossrect.width,
-                bossrect.height
-            )
+        screen.blit(
+            bossimage,
+            (bossrect.x - camerax, bossrect.y - cameray)
         )
         boss()
 
@@ -442,11 +458,17 @@ def boss():
             vel_y = -6
 
             print("Player HP:", playerhp, "Boss HP:", bosshp)
+    
 def changegamestate():
     global gamestate
     if playerhp <= 0:
         gamestate = "death"  
+    if bosshp <=0:
+        gamestate = "win"
 def death():
+    pygame.mixer.music.load("erase.mp3")
+    pygame.mixer.music.set_volume(0.5)
+    pygame.mixer.music.play(1)
     screen.fill(black)
     screen.blit(deathtextbox, deathtextrect)
     screen.blit(deathtextbox2, deathtextrect2)
@@ -463,19 +485,75 @@ def jumpcode(keys):
     if keys[pygame.K_UP] and onground:
         vel_y = jumppower
         onground = False
+def mainmenu():
+    global textRectmain, mainmenutextRect
+
+    if currentlevel == 0:
+        mainmenutextRect.center = (500,20)
+        mainmenutext = font.render("Press any key to start", True, black)
+        
+        textRect.center = (500, 200)
+
+        textRectmain.center = (650, 200)
+
+        screen.blit(textbox, textRect)
+        screen.blit(textboxmain, textRectmain)
+
+        screen.blit(mainmenutext, mainmenutextRect)
+    
+
+    else:
+        textRectmain.x = playerx - camerax
+        textRectmain.y = playery - cameray
+
+        screen.blit(textboxmain, textRectmain)
+def musiccode():
+    global currentsong
+
+    if currentlevel == 0 and currentsong != "title":
+        pygame.mixer.music.load("title theme.mp3")
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+        currentsong = "title"
+
+    elif currentlevel >= 1 and currentlevel < 5 and currentsong != "main":
+        pygame.mixer.music.load("main theme.mp3")
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+        currentsong = "main"
+    elif currentlevel == 5 and currentsong != "boss":
+        pygame.mixer.music.load("Boss theme.mp3")
+        pygame.mixer.music.set_volume(0.5)
+        pygame.mixer.music.play(-1)
+        currentsong = "boss"
+def win():
+    screen.fill(black)
+
+    wintext = font.render("YOU BEAT THE EVIL ERASER!", True, white)
+    restarttext = font.render("Press 1 to restart or ESC to quit", True, white)
+    creditstext = font.render("Made by Jacob Keating", True, white)
+
+    winrect = wintext.get_rect(center=(screenW//2, screenH//2 - 20))
+    restartrect = restarttext.get_rect(center=(screenW//2, screenH//2 + 20))
+    creditsrect = creditstext.get_rect(center=(screenW//2 + 340, screenH//2 + 175))
+
+    screen.blit(wintext, winrect)
+    screen.blit(restarttext, restartrect)
+    screen.blit(creditstext, creditsrect)
 
 
 levelspawn()
 running = True
 
 while running:
-
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN and currentlevel == 0:
             startgravity = True
+            currentlevel += 1
 
     screen.fill(white)
 
@@ -494,30 +572,65 @@ while running:
         playerx = 0
 
     jumpcode(keys)
-    Gravity()
-    collision_y()
-    collision_x()
+    if gamestate == "play":
+        Gravity()
+        collision_y()
+        collision_x()
     next_level()
     cameracode()
     draw_level()
     bossspawn()
-    textRectmain.x = playerx - camerax
-    textRectmain.y = playery - cameray
-
-    if currentlevel == 0:
-        screen.blit(textbox, textRect)
-
-    screen.blit(textboxmain, textRectmain)
+    mainmenu()
+    musiccode()
+    if currentlevel >=1:
+        livestext = font.render(f"Lives: {lives}", True, black)
+        screen.blit(livestext,livestextRect)
 
     pygame.display.flip()
     clock.tick(FPS)
     changegamestate()
+
     if gamestate == "death":
         death()
         pygame.display.flip()
         pygame.time.wait(5000)
         running = False
+    else:
+        pygame.display.flip()
+    
+    if gamestate == "win":
+        waiting = True
+
+        while waiting:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                    waiting = False
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_1:
+                        currentlevel = 1
+                        gamestate = "play"
+
+                        bosshp = 100
+                        playerhp = 100
+                        lives = 3
+
+                        levelspawn()
+
+                        waiting = False
+                        break
+                        
+
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+                        waiting = False
+
+            win()
+            pygame.display.flip()
+            clock.tick(FPS)
         
+                
     death_code()
 
 pygame.quit()
